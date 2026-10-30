@@ -1,0 +1,41 @@
+ticket_id,channel,tier,text,label_category,label_priority
+T001,email,vip,지난달 요금이 두 번 결제되었습니다. 카드 명세서에 같은 금액이 2건 찍혀 있어요. 빨리 환불해 주세요.,billing,high
+T002,chat,normal,"이번 달 청구서에 모르는 부가서비스 요금 3,300원이 붙어 있는데 무슨 요금인가요?",billing,normal
+T003,email,normal,세금계산서를 회사 이메일로 다시 발행받을 수 있을까요?,billing,low
+T004,phone,normal,결제 수단을 신용카드에서 계좌이체로 바꾸고 싶습니다.,billing,low
+T005,chat,vip,연간 플랜으로 바꾸면 남은 월 요금은 어떻게 정산되나요? 오늘 안에 결정해야 해요.,billing,normal
+T006,email,normal,해지했는데도 이번 달 요금이 빠져나갔습니다. 환불 요청합니다.,billing,high
+T007,chat,normal,쿠폰을 적용했는데 결제 금액에 할인이 반영되지 않았어요.,billing,normal
+T008,email,normal,영수증 출력은 어디서 하나요?,billing,low
+T009,chat,vip,앱이 실행하자마자 꺼집니다. 업데이트 후부터 계속 그래요. 업무에 지장이 큽니다.,technical,high
+T010,email,normal,로그인할 때 '서버 오류 500'이 뜨면서 들어가지지 않습니다.,technical,high
+T011,chat,normal,대시보드 그래프가 가끔 늦게 로딩됩니다. 10초 정도 걸려요.,technical,normal
+T012,email,normal,엑셀 내보내기를 하면 한글이 깨져서 나옵니다.,technical,normal
+T013,chat,normal,다크 모드는 언제 지원되나요?,technical,low
+T014,phone,vip,전체 직원이 동시에 접속이 안 됩니다. 지금 서비스 장애인가요?,technical,high
+T015,email,normal,API 호출 시 가끔 타임아웃이 발생합니다. 재시도 권장 방식이 있나요?,technical,normal
+T016,chat,normal,알림 이메일이 스팸함으로 들어갑니다.,technical,low
+T017,chat,normal,주문한 지 5일이 지났는데 아직 배송 준비 중으로 나옵니다.,delivery,normal
+T018,email,vip,받은 상품이 파손되어 있습니다. 사진 첨부합니다. 교환 원합니다.,delivery,high
+T019,chat,normal,배송지를 회사 주소로 바꾸고 싶은데 아직 가능할까요?,delivery,normal
+T020,phone,normal,택배 송장번호를 조회해도 정보가 없다고 나옵니다.,delivery,normal
+T021,email,normal,다른 사람의 상품이 잘못 배송되었습니다.,delivery,high
+T022,chat,normal,제주도도 무료 배송인가요?,delivery,low
+T023,email,normal,주문한 수량보다 1개 적게 왔어요.,delivery,normal
+T024,chat,normal,비밀번호를 잊어버렸어요. 재설정 메일이 오지 않습니다.,account,normal
+T025,email,vip,제 계정에서 모르는 기기로 로그인한 기록이 있습니다. 해킹이 의심됩니다.,account,high
+T026,chat,normal,회원 탈퇴는 어떻게 하나요?,account,low
+T027,email,normal,회사 담당자가 바뀌어서 계정 소유자를 변경하고 싶습니다.,account,normal
+T028,chat,normal,이메일 주소를 변경하고 싶어요.,account,low
+T029,phone,normal,2단계 인증 휴대폰을 분실해서 로그인을 못 하고 있어요.,account,high
+T030,email,normal,팀원 초대 링크가 만료되었다고 나옵니다.,account,normal
+T031,chat,normal,상담원 연결 가능한 시간이 언제인가요?,other,low
+T032,email,normal,귀사와 제휴 제안을 드리고 싶습니다. 담당 부서를 알려주세요.,other,low
+T033,chat,normal,서비스 정말 잘 쓰고 있어요. 감사합니다!,other,low
+T034,email,vip,다음 분기 대규모 도입을 검토 중입니다. 견적 상담을 요청합니다.,other,normal
+T035,chat,normal,채용 공고는 어디서 볼 수 있나요?,other,low
+T036,email,normal,개인정보 처리방침 최신 버전을 받아볼 수 있을까요?,other,low
+T037,chat,vip,결제가 실패했다고 나오는데 돈은 빠져나갔어요. 앱도 계속 멈춥니다.,billing,high
+T038,email,normal,배송 조회 페이지가 열리지 않고 오류가 납니다.,technical,normal
+T039,chat,normal,환불 받은 금액이 카드에 언제 반영되나요?,billing,normal
+T040,phone,normal,주문 취소하고 싶은데 이미 출고되었다고 하네요.,delivery,normal
