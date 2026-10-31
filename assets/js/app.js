@@ -2,6 +2,7 @@
   "use strict";
 
   const { LEVELS, MODULES, PROJECTS, PLAYGROUND_CODE, API_REFERENCE, RESOURCES } = window.AgentLabPages;
+  const VIDEOS = window.AgentLabVideos || {};
   const DOCS = [...MODULES.map((m) => ({ ...m, kind: "module" })), ...PROJECTS.map((p) => ({ ...p, kind: "project" }))];
   const main = document.getElementById("main");
   let onProgressChange = null; // 현재 페이지가 진행 상황 변화에 반응해야 할 때 (프로젝트 단계 잠금 해제)
@@ -22,16 +23,17 @@
   // ---------- 진행 상황 (localStorage) ----------
   const Progress = {
     key: "agentlab.progress",
-    data: { ex: {}, quiz: {}, code: {} },
+    data: { ex: {}, quiz: {}, code: {}, video: {} },
     load() {
       try {
-        this.data = Object.assign({ ex: {}, quiz: {}, code: {} }, JSON.parse(localStorage.getItem(this.key) || "{}"));
+        this.data = Object.assign({ ex: {}, quiz: {}, code: {}, video: {} }, JSON.parse(localStorage.getItem(this.key) || "{}"));
       } catch (e) { /* 손상된 데이터는 무시 */ }
     },
     save() {
       try { localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) { /* 저장 불가 환경 */ }
     },
     done(kind, id) { return !!this.data[kind][id]; },
+    unmark(kind, id) { delete this.data[kind][id]; this.save(); },
     mark(kind, id) {
       this.data[kind][id] = true;
       this.save();
@@ -41,7 +43,7 @@
     code(id) { return this.data.code[id]; },
     setCode(id, code) { this.data.code[id] = code; this.save(); },
     clearCode(id) { delete this.data.code[id]; this.save(); },
-    reset() { this.data = { ex: {}, quiz: {}, code: {} }; this.save(); renderNav(); },
+    reset() { this.data = { ex: {}, quiz: {}, code: {}, video: {} }; this.save(); renderNav(); },
   };
   Progress.load();
 
@@ -419,6 +421,190 @@
     if (window.hljs) root.querySelectorAll("pre code").forEach((c) => window.hljs.highlightElement(c));
   }
 
+
+  // ---------- 영상 학습 (assets/js/videos.js) ----------
+  const LANG_LABEL = { ko: "한국어", en: "영어" };
+  const docLabel = (docId) => {
+    const d = DOCS.find((x) => x.id === docId);
+    if (!d) return docId;
+    return d.kind === "project" ? `P${PROJECTS.indexOf(PROJECTS.find((p) => p.id === docId)) + 1}. ${d.title}` : `${d.id}. ${d.title}`;
+  };
+
+  function videoCard(v, i, opts = {}) {
+    const terms = (v.terms || []).map(([en, ko]) => `<li><b>${esc(en)}</b>: ${esc(ko)}</li>`).join("");
+    const card = h(`
+      <div class="vcard" id="v-${esc(v.yt)}" data-yt="${esc(v.yt)}">
+        <div class="vmedia">
+          <button class="vthumb" type="button" aria-label="${esc(v.title)} 재생" style="background-image:url('https://i.ytimg.com/vi/${esc(v.yt)}/hqdefault.jpg')">
+            <span class="vplay">▶</span><span class="vlen">${esc(v.len)}</span>
+          </button>
+        </div>
+        <div class="vinfo">
+          <div class="vbadges">
+            ${opts.num !== false ? `<span class="vnum">${String.fromCharCode(9312 + i)}</span>` : ""}
+            <span class="vtag lang-${esc(v.lang)}">${LANG_LABEL[v.lang] || esc(v.lang)}</span>
+            <span class="vtag lvl">${esc(v.level)}</span>
+            ${opts.doc ? `<a class="vsec" href="${opts.doc.href}">${esc(opts.doc.label)}</a>` : v.secTitle ? `<a class="vsec" href="#" data-goto-sec="${esc(v.sec)}">관련: ${esc(v.secTitle)}</a>` : ""}
+          </div>
+          <h4 class="vtitle">${esc(v.ko || v.title)}</h4>
+          <div class="vmeta">${esc(v.channel)} · ${esc(v.len)}${v.ko ? ` · 원제: ${esc(v.title)}` : ""}</div>
+          <p class="vwhy">${esc(v.why)}</p>
+          <details class="vpoints" ${opts.collapsed ? "" : "open"}>
+            <summary>시청 포인트${terms ? " · 핵심 용어" : ""}</summary>
+            <ul>${(v.points || []).map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
+            ${terms ? `<div class="vterms"><span>핵심 용어</span><ul>${terms}</ul></div>` : ""}
+            ${v.lang === "en" ? `<p class="vtip">💡 영어 영상은 플레이어의 ⚙️ 설정 → 자막 → 자동 번역 → 한국어를 고르면 한국어 자막으로 볼 수 있습니다.</p>` : ""}
+          </details>
+          <div class="vactions">
+            <label class="vwatched"><input type="checkbox"> 시청 완료</label>
+            <a href="https://www.youtube.com/watch?v=${esc(v.yt)}" target="_blank" rel="noopener">YouTube에서 보기 ↗</a>
+          </div>
+        </div>
+      </div>`);
+    const thumb = card.querySelector(".vthumb");
+    thumb.onclick = () => {
+      const params = new URLSearchParams({ autoplay: "1", rel: "0", hl: "ko", cc_lang_pref: "ko" });
+      if (v.lang === "en") params.set("cc_load_policy", "1");
+      thumb.replaceWith(h(`<div class="vframe"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.yt)}?${params}"
+        title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`));
+    };
+    const box = card.querySelector(".vwatched input");
+    box.checked = Progress.done("video", v.yt);
+    card.classList.toggle("watched", box.checked);
+    box.onchange = () => {
+      if (box.checked) Progress.mark("video", v.yt); else Progress.unmark("video", v.yt);
+      card.classList.toggle("watched", box.checked);
+      if (opts.onChange) opts.onChange();
+    };
+    return card;
+  }
+
+  // 본문 h2 중 "3." 또는 "Step 2."처럼 sec로 시작하는 제목을 찾습니다.
+  function findSection(page, sec) {
+    if (!sec) return null;
+    return [...page.querySelectorAll("h2")].find((el) => el.textContent.trim().startsWith(sec)) || null;
+  }
+
+  function mountVideos(page, docId) {
+    const data = VIDEOS[docId];
+    if (!data || !data.items || !data.items.length) return;
+    const items = data.items.map((v) => {
+      const hEl = findSection(page, v.sec);
+      return { ...v, secTitle: hEl ? hEl.textContent.trim() : "", secEl: hEl };
+    });
+    const block = h(`
+      <section class="video-block" id="videos">
+        <div class="vb-head">
+          <h2 class="vb-title">📺 영상으로 먼저 보기</h2>
+          <span class="vb-count"></span>
+          <button class="btn vb-toggle" type="button">접기</button>
+        </div>
+        <div class="vb-body">
+          <p class="vb-intro">${esc(data.intro || "")}</p>
+          <div class="vb-list"></div>
+          <p class="vb-foot">모든 영상 모음은 <a href="#/videos">📺 영상 강의</a> 메뉴에서 볼 수 있습니다. 썸네일을 누르면 이 화면에서 바로 재생됩니다.</p>
+        </div>
+      </section>`);
+    const list = block.querySelector(".vb-list");
+    const count = block.querySelector(".vb-count");
+    const refresh = () => {
+      const n = items.filter((v) => Progress.done("video", v.yt)).length;
+      count.textContent = `시청 ${n} / ${items.length}`;
+    };
+    items.forEach((v, i) => list.appendChild(videoCard(v, i, { onChange: refresh })));
+    refresh();
+
+    // 접기 상태는 브라우저에 기억합니다.
+    const KEY = "agentlab.videosCollapsed";
+    const body = block.querySelector(".vb-body");
+    const toggle = block.querySelector(".vb-toggle");
+    const setCollapsed = (c) => { body.hidden = c; toggle.textContent = c ? "펼치기" : "접기"; };
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(KEY) === "1"; } catch (e) { /* 저장 불가 환경 */ }
+    setCollapsed(collapsed);
+    toggle.onclick = () => {
+      collapsed = !collapsed;
+      setCollapsed(collapsed);
+      try { localStorage.setItem(KEY, collapsed ? "1" : "0"); } catch (e) { /* 저장 불가 환경 */ }
+    };
+
+    // 위치: 학습 목표(blockquote) 바로 뒤, 없으면 제목 뒤
+    const h1 = page.querySelector("h1");
+    const after = h1 && h1.nextElementSibling && h1.nextElementSibling.tagName === "BLOCKQUOTE" ? h1.nextElementSibling : h1;
+    if (after) after.after(block); else page.prepend(block);
+
+    // 관련 절 제목 옆에 "📺 관련 영상" 바로가기
+    const goVideo = (yt) => {
+      if (body.hidden) setCollapsed(false);
+      const el = block.querySelector(`#v-${CSS.escape(yt)}`);
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); }
+    };
+    const bySec = new Map();
+    items.forEach((v) => { if (v.secEl) { if (!bySec.has(v.secEl)) bySec.set(v.secEl, []); bySec.get(v.secEl).push(v); } });
+    bySec.forEach((vs, hEl) => {
+      const chip = h(`<a href="#" class="vchip" title="${esc(vs.map((v) => v.ko || v.title).join("\n"))}">📺 관련 영상 ${vs.length}</a>`);
+      chip.onclick = (e) => { e.preventDefault(); goVideo(vs[0].yt); };
+      hEl.appendChild(chip);
+    });
+    block.querySelectorAll("[data-goto-sec]").forEach((a) => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        const hEl = findSection(page, a.dataset.gotoSec);
+        if (hEl) hEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+    });
+  }
+
+  function renderVideos() {
+    const docs = DOCS.filter((d) => VIDEOS[d.id]);
+    const all = docs.flatMap((d) => VIDEOS[d.id].items.map((v) => ({ v, d })));
+    const page = h(`
+      <div class="page prose videos-page">
+        <h1>📺 영상 강의</h1>
+        <p>각 학습 영역에 맞춰 고른 영상입니다. 모듈 페이지 상단의 <b>영상으로 먼저 보기</b>에도 같은 영상이 들어 있습니다.
+          영상으로 개념을 잡고 → 본문을 읽고 → 예제와 실습을 실행하는 순서를 추천합니다.</p>
+        <div class="vfilter">
+          <span class="vf-label">언어</span>
+          <button class="chip-btn active" data-lang="">전체</button><button class="chip-btn" data-lang="ko">한국어</button><button class="chip-btn" data-lang="en">영어</button>
+          <span class="vf-label">수준</span>
+          <button class="chip-btn active" data-level="">전체</button><button class="chip-btn" data-level="입문">입문</button><button class="chip-btn" data-level="핵심">핵심</button><button class="chip-btn" data-level="심화">심화</button>
+          <label class="vf-unwatched"><input type="checkbox"> 안 본 영상만</label>
+          <span class="vb-count vf-count"></span>
+        </div>
+        <div class="vlib"></div>
+      </div>`);
+    const lib = page.querySelector(".vlib");
+    const count = page.querySelector(".vf-count");
+    const f = { lang: "", level: "", unwatched: false };
+    const draw = () => {
+      lib.replaceChildren();
+      docs.forEach((d) => {
+        const vs = VIDEOS[d.id].items.filter((v) =>
+          (!f.lang || v.lang === f.lang) && (!f.level || v.level === f.level) && (!f.unwatched || !Progress.done("video", v.yt)));
+        if (!vs.length) return;
+        const sec = h(`<section class="vlib-sec"><h2><a href="${docHref(d)}">${d.icon} ${esc(docLabel(d.id))}</a></h2><div class="vb-list"></div></section>`);
+        vs.forEach((v, i) => sec.querySelector(".vb-list").appendChild(videoCard(v, i, { num: false, collapsed: true, onChange: refreshCount })));
+        lib.appendChild(sec);
+      });
+      if (!lib.children.length) lib.appendChild(h(`<p class="muted">조건에 맞는 영상이 없습니다.</p>`));
+      refreshCount();
+    };
+    function refreshCount() {
+      const uniq = [...new Set(all.map((x) => x.v.yt))];
+      count.textContent = `시청 ${uniq.filter((id) => Progress.done("video", id)).length} / ${uniq.length}`;
+    }
+    page.querySelectorAll("[data-lang]").forEach((b) => b.onclick = () => {
+      f.lang = b.dataset.lang; page.querySelectorAll("[data-lang]").forEach((x) => x.classList.toggle("active", x === b)); draw();
+    });
+    page.querySelectorAll("[data-level]").forEach((b) => b.onclick = () => {
+      f.level = b.dataset.level; page.querySelectorAll("[data-level]").forEach((x) => x.classList.toggle("active", x === b)); draw();
+    });
+    page.querySelector(".vf-unwatched input").onchange = (e) => { f.unwatched = e.target.checked; draw(); };
+    draw();
+    main.replaceChildren(page);
+  }
+
   // ---------- 페이지 ----------
   function docHref(doc) {
     return doc.kind === "project" ? `#/p/${doc.id}` : `#/m/${doc.id}`;
@@ -445,6 +631,7 @@
     const level = LEVELS.find((l) => l.id === mod.level);
     if (level) page.prepend(h(`<div class="crumb">스터디 · ${esc(level.title)} · 모듈 ${esc(mod.id)}</div>`));
     mountWidgets(page, parsed);
+    mountVideos(page, mod.id);
     const prev = MODULES[idx - 1];
     const next = MODULES[idx + 1];
     page.appendChild(h(`
@@ -494,6 +681,9 @@
     const stepper = h(`<nav class="stepper"><div class="stepper-head"><b>진행 단계</b><span class="stepper-pct"></span></div><ol></ol></nav>`);
     const firstH1 = page.querySelector("h1");
     (firstH1 ? firstH1.nextElementSibling || firstH1 : page.firstChild).after(stepper);
+    mountVideos(page, proj.id);
+    const vb = page.querySelector("#videos");
+    if (vb) stepper.after(vb);
     const list = stepper.querySelector("ol");
 
     function refresh() {
@@ -807,6 +997,7 @@
       else if (path.startsWith("p/")) await renderProject(path.slice(2));
       else if (path === "playground") renderPlayground();
       else if (path === "resources") renderResources();
+      else if (path === "videos") renderVideos();
       else if (path === "settings") renderSettings();
       else renderNotFound();
     } catch (e) {
